@@ -39,6 +39,7 @@ shape = SubResource("CircleShape2D_d3poj")
 [node name="Bird2" type="RigidBody2D" parent="."]
 position = Vector2(203, 89)
 input_pickable = true
+mass = 2.0
 physics_material_override = SubResource("PhysicsMaterial_xv0uw")
 freeze = true
 script = ExtResource("2_nopv6")
