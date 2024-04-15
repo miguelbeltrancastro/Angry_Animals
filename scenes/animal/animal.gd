@@ -11,6 +11,7 @@ func _physics_process(delta):
 	pass
 
 func die() -> void:
+	SignalManager.on_animal_died.emit()
 	queue_free()
 
 func _on_visible_on_screen_notifier_2d_screen_exited():
