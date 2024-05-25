@@ -6,24 +6,48 @@ var _state: ANIMAL_STATE = ANIMAL_STATE.READY
 const DRAG_LIM_MAX: Vector2 = Vector2(0,60)
 const DRAG_LIM_MIN: Vector2 = Vector2(-60,0)
 
+const IMPULSE_MULT: float = 20.0
+const IMPULSE_MAX: float = 1200.0
+
 var _start: Vector2 = Vector2.ZERO
 var _drag_start: Vector2 = Vector2.ZERO
 var _dragged_vector: Vector2 = Vector2.ZERO
+var _last_dragged_vector: Vector2 = Vector2.ZERO
+var _arrow_scale_x: float = 0.0
+
+@onready var arrow = $Arrow
+@onready var stretch_sound = $StretchSound
+@onready var launch_sound = $LaunchSound
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	_arrow_scale_x = arrow.scale.x
+	arrow.hide()
 	_start = position
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _physics_process(delta):
 	update(delta)
 
+func get_impulse() -> Vector2:
+	return _dragged_vector * -1 * IMPULSE_MULT
+
+func set_drag() -> void:
+	_drag_start = get_global_mouse_position()
+	arrow.show()
+
+func set_release() -> void:
+	arrow.hide()
+	freeze = false
+	apply_central_impulse(get_impulse())
+	launch_sound.play()
+	
 func set_new_state(new_state:ANIMAL_STATE) -> void:
 	_state = new_state
 	if _state == ANIMAL_STATE.RELEASE:
-		freeze = false
+		set_release()
 	elif _state == ANIMAL_STATE.DRAG:
-		_drag_start = get_global_mouse_position()
+		set_drag()
 
 func detect_release() -> bool:
 	if _state == ANIMAL_STATE.DRAG:
@@ -32,10 +56,24 @@ func detect_release() -> bool:
 			return true
 	return false
 
+func scale_arrow() -> void:
+	var imp_len = get_impulse().length()
+	var perc = imp_len/IMPULSE_MAX
+	arrow.scale.x = (_arrow_scale_x * perc) + _arrow_scale_x
+	arrow.rotation = (_start - position).angle()
+
+func play_strecht_sound() -> void:
+	if(_last_dragged_vector - _dragged_vector).length() > 0:
+		if stretch_sound.playing == false:
+			stretch_sound.play()
+
 func get_drag_vector(gmp:Vector2) -> Vector2:
 	return gmp - _drag_start
 	
 func drag_in_limits() -> void:
+	
+	_last_dragged_vector = _dragged_vector
+	
 	_dragged_vector.x=clampf(
 		_dragged_vector.x,
 		DRAG_LIM_MIN.x,
@@ -48,13 +86,14 @@ func drag_in_limits() -> void:
 	)
 	position = _start + _dragged_vector
 
-
 func update_drag() -> void:
 	if detect_release() == true:
 		return
 	var gmp = get_global_mouse_position()
 	_dragged_vector = get_drag_vector(gmp)
+	play_strecht_sound()
 	drag_in_limits()
+	scale_arrow()
 
 func update(delta:float) -> void:
 	match _state:
